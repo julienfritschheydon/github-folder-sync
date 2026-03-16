@@ -75,14 +75,24 @@ for /f "tokens=*" %%f in ('findstr /i "    New File" "%TEMP_LOG%"') do (
 :: ============================================
 echo [%DATE% %TIME%] Verification espace disque >> "%LOG_FILE%"
 
-for /f "tokens=3" %%a in ('dir D: /-c ^| find "bytes free"') do set "FREE_SPACE=%%a"
-set "FREE_SPACE_GB=!FREE_SPACE:~0,-9!"
-
-if !FREE_SPACE_GB! LSS 5 (
-    echo [%DATE% %TIME%] ATTENTION: Espace disque insuffisant (!FREE_SPACE_GB! GB) >> "%LOG_FILE%"
+:: Verification simple avec WMIC (compare directement les bytes)
+:: 5 GB = 5368709120 bytes
+wmic LogicalDisk where "DeviceID='D:' and FreeSpace > 5368709120" get DeviceID 2>nul | find /i "D:" >nul
+if errorlevel 1 (
+    echo [%DATE% %TIME%] ATTENTION: Espace disque insuffisant (moins de 5 GB) >> "%LOG_FILE%"
+    echo [%DATE% %TIME%] Minimum requis: 5 GB >> "%LOG_FILE%"
     echo [%DATE% %TIME%] Synchronisation annulee >> "%LOG_FILE%"
+    echo.
+    echo ============================================
+    echo ATTENTION: ESPACE DISQUE INSUFFISANT
+    echo Espace libre sur D: moins de 5 GB
+    echo Minimum requis: 5 GB
+    echo ============================================
+    echo.
     goto :end
 )
+
+echo [%DATE% %TIME%] Espace disque suffisant (plus de 5 GB) >> "%LOG_FILE%"
 
 :: ============================================
 :: 4. Synchronisation principale avec RoboCopy
