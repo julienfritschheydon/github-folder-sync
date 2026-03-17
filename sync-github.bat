@@ -2,10 +2,10 @@
 setlocal enabledelayedexpansion
 
 :: ============================================
-:: Script de synchronisation GitHub avec corbeille
+:: Script de synchronisation GitHub avec corbeille (7 jours)
 :: Source: C:\Users\Julien Fritsch\Documents\GitHub
 :: Destination: D:\GitHub
-:: Corbeille: D:\GitHub\_Corbeille\YYYY-MM-DD\
+:: Corbeille: D:\GitHub\_Corbeille\YYYY-MM-DD\ (rétention 7 jours)
 :: ============================================
 
 :: Configuration
@@ -33,12 +33,12 @@ set "TODAY=%YYYY%-%MM%-%DD%"
 set "LOG_FILE=%LOGS%\sync-%YYYY%%MM%%DD%.log"
 
 :: ============================================
-:: 1. Nettoyage de la corbeille (fichiers > 30 jours)
+:: 1. Nettoyage de la corbeille (fichiers > 7 jours)
 :: ============================================
-echo [%DATE% %TIME%] Debut du nettoyage de la corbeille (30 jours) >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Debut du nettoyage de la corbeille (7 jours) >> "%LOG_FILE%"
 
-:: Calcul de la date limite (30 jours en arriere)
-for /f "usebackq" %%d in (`powershell -command "(Get-Date).AddDays(-30).ToString('yyyy-MM-dd')"`) do set "LIMIT_DATE=%%d"
+:: Calcul de la date limite (7 jours en arriere)
+for /f "usebackq" %%d in (`powershell -command "(Get-Date).AddDays(-7).ToString('yyyy-MM-dd')"`) do set "LIMIT_DATE=%%d"
 
 :: Parcours et suppression des anciens dossiers de corbeille
 for /d %%d in ("%CORBEILLE%\*") do (
@@ -95,16 +95,9 @@ if not exist "D:\" (
 echo [%DATE% %TIME%] Disque D: accessible, synchronisation autorisee >> "%LOG_FILE%"
 
 :: ============================================
-:: 4. Synchronisation principale avec RoboCopy
+:: 4. Synchronisation principale avec RoboCopy (logs minimal)
 :: ============================================
-echo [%DATE% %TIME%] Debut synchronisation principale >> "%LOG_FILE%"
-echo.
-echo ============================================
-echo Synchronisation GitHub - %TODAY%
-echo Source: %SOURCE%
-echo Destination: %DEST%
-echo ============================================
-echo.
+echo [%DATE% %TIME%] Début synchronisation principale >> "%LOG_FILE%"
 
 :: Options RoboCopy optimisees pour GitHub
 :: /E : Sous-dossiers y compris vides
@@ -121,18 +114,15 @@ robocopy "%SOURCE%" "%DEST%" ^
     /COPY:DAT ^
     /R:2 ^
     /W:5 ^
-    /LOG+:"%LOG_FILE%" ^
-    /TEE ^
     /NP ^
-    /XD ".git\objects\pack" "node_modules\.cache" ".next\cache" ^
+    /XD ".git" "node_modules" "test-results" "dist" "build" ".next" ".vscode" ".idea" ^
     /XF "*.tmp" "*.lock" "*.swp" ".DS_Store"
 
 set "ROBOCOPY_ERROR=%ERRORLEVEL%"
 
 :: ============================================
-:: 5. Analyse des resultats
+:: 5. Analyse des resultats (logs minimal)
 :: ============================================
-echo.
 echo [%DATE% %TIME%] Analyse des resultats >> "%LOG_FILE%"
 
 if %ROBOCOPY_ERROR% LEQ 7 (
@@ -143,35 +133,27 @@ if %ROBOCOPY_ERROR% LEQ 7 (
     for /f %%a in ('dir /s /b "%CORBEILLE_TODAY%" 2^>nul ^| find /c /v ""') do set "TRASH_COUNT=%%a"
     echo [%DATE% %TIME%] Fichiers deplaces vers corbeille: !TRASH_COUNT! >> "%LOG_FILE%"
     
-    echo.
-    echo ============================================
-    echo SYNCHRONISATION TERMINEE
-    echo Fichiers deplaces vers corbeille: !TRASH_COUNT!
-    echo Log: %LOG_FILE%
-    echo ============================================
-    echo.
-    
 ) else (
     echo [%DATE% %TIME%] Erreur lors de la synchronisation >> "%LOG_FILE%"
     echo [%DATE% %TIME%] Code retour RoboCopy: %ROBOCOPY_ERROR% >> "%LOG_FILE%"
-    echo.
+    
     echo ============================================
     echo ERREUR DE SYNCHRONISATION
     echo Code erreur: %ROBOCOPY_ERROR%
     echo Consultez le log: %LOG_FILE%
     echo ============================================
     echo.
+    goto :end
 )
 
+echo [%DATE% %TIME%] Synchronisation GitHub terminee avec succes >> "%LOG_FILE%"
+
 :: ============================================
-:: 6. Nettoyage final
+:: 6. Fin du script
 :: ============================================
 if exist "%TEMP_LOG%" del "%TEMP_LOG%"
 
 :end
 echo [%DATE% %TIME%] Fin du script >> "%LOG_FILE%"
-echo.
-echo Script termine. Consultez %LOG_FILE% pour les details.
-echo.
 
 endlocal
