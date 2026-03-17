@@ -22,7 +22,7 @@ if %errorLevel% neq 0 (
 
 :: Configuration
 set "TASK_NAME=GitHub-Sync"
-set "SCRIPT_PATH=C:\Scripts\sync-github.bat"
+set "SCRIPT_PATH=%~dp0sync-github.bat"
 set "DESCRIPTION=Synchronisation automatique du dossier GitHub toutes les 4 heures avec corbeille"
 
 :: Verification que le script principal existe
@@ -30,7 +30,7 @@ if not exist "%SCRIPT_PATH%" (
     echo ERREUR: Le script de synchronisation n'existe pas:
     echo %SCRIPT_PATH%
     echo.
-    echo Assurez-vous que sync-github.bat a ete cree dans C:\Scripts\
+    echo Assurez-vous que sync-github.bat est dans le meme repertoire que setup-task.bat
     pause
     exit /b 1
 )
@@ -64,8 +64,7 @@ schtasks /create ^
     /f ^
     /ru "SYSTEM" ^
     /rl highest ^
-    /st 00:00 ^
-    /description "%DESCRIPTION%"
+    /st 00:00
 
 if %errorLevel% equ 0 (
     echo.
@@ -74,12 +73,12 @@ if %errorLevel% equ 0 (
     echo ============================================
     echo Nom: %TASK_NAME%
     echo Frequence: Toutes les 4 heures
-   heure: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+    echo Heures: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
     echo Utilisateur: SYSTEM (droits eleves)
     echo.
     echo La premiere synchronisation aura lieu:
     echo - Aujourd'hui a 00:00 si l'heure est depassee
-    - Sinon demain a 00:00
+    echo - Sinon demain a 00:00
     echo.
     echo Pour verifier la tache:
     echo - Panneau de configuration > Outils d'administration > Planificateur de taches

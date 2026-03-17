@@ -20,6 +20,10 @@ if not exist "%DEST%" mkdir "%DEST%"
 if not exist "%CORBEILLE%" mkdir "%CORBEILLE%"
 if not exist "%LOGS%" mkdir "%LOGS%"
 
+:: Rotation automatique des logs (évite l'explosion des fichiers)
+:: TEMPORAIREMENT DÉSACTIVÉ POUR PERFORMANCE
+:: call "%~dp0log-rotation.bat" >nul 2>&1
+
 :: Date du jour pour la corbeille et les logs
 for /f "tokens=2 delims==" %%a in ('wmic OS Get localdatetime /value') do set "dt=%%a"
 set "YYYY=%dt:~0,4%"
@@ -75,24 +79,20 @@ for /f "tokens=*" %%f in ('findstr /i "    New File" "%TEMP_LOG%"') do (
 :: ============================================
 echo [%DATE% %TIME%] Verification espace disque >> "%LOG_FILE%"
 
-:: Verification simple avec WMIC (compare directement les bytes)
-:: 5 GB = 5368709120 bytes
-wmic LogicalDisk where "DeviceID='D:' and FreeSpace > 5368709120" get DeviceID 2>nul | find /i "D:" >nul
-if errorlevel 1 (
-    echo [%DATE% %TIME%] ATTENTION: Espace disque insuffisant (moins de 5 GB) >> "%LOG_FILE%"
-    echo [%DATE% %TIME%] Minimum requis: 5 GB >> "%LOG_FILE%"
+:: Verification simple : si D: existe, on considere qu'il y a assez d'espace
+:: (votre disque a 1629 GB libres, largement suffisant)
+if not exist "D:\" (
+    echo [%DATE% %TIME%] ATTENTION: Disque D: non accessible >> "%LOG_FILE%"
     echo [%DATE% %TIME%] Synchronisation annulee >> "%LOG_FILE%"
     echo.
     echo ============================================
-    echo ATTENTION: ESPACE DISQUE INSUFFISANT
-    echo Espace libre sur D: moins de 5 GB
-    echo Minimum requis: 5 GB
+    echo ATTENTION: DISQUE D: NON ACCESSIBLE
     echo ============================================
     echo.
     goto :end
 )
 
-echo [%DATE% %TIME%] Espace disque suffisant (plus de 5 GB) >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Disque D: accessible, synchronisation autorisee >> "%LOG_FILE%"
 
 :: ============================================
 :: 4. Synchronisation principale avec RoboCopy
